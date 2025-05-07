@@ -148,12 +148,12 @@ public class UserServiceImpl implements UserService {
         }
 
     }
-    public void register(User userDto, String siteURL)  {
-            String encodedPassword = passwordEncoder.encode(userDto.getPassword());
-            userDto.setPassword(encodedPassword);
+    // public void register(User userDto, String siteURL)  {
+    //         String encodedPassword = passwordEncoder.encode(userDto.getPassword());
+    //         userDto.setPassword(encodedPassword);
 
 
-    }
+    // }
 
     public boolean verify(String verificationCode) {
             User user = userRepository.findByVerificationCode(verificationCode);
