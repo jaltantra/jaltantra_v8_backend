@@ -77,6 +77,28 @@ public class UserController {
         }
     }
 
+    // Endpoint to get email from JWT token
+    @GetMapping("/email")
+    public ResponseEntity<String> getEmailFromToken(@RequestHeader("Authorization") String authHeader) {
+        try {
+            // Extract the token from the Authorization header
+            String token = authHeader.replace("Bearer ", "");
+
+            // Decode the email from the token
+            String email = jwtTokenUtil.getEmailFromToken(token);
+
+            System.out.println("hi");
+            if (email != null) {
+                return ResponseEntity.ok(email);
+            } else {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid token");
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error extracting email from token");
+        }
+    }
+
+
     //Endpoint for logout
     @DeleteMapping("/logout")
     public ResponseEntity<?> logout(@RequestHeader("Authorization") String authHeader) {
