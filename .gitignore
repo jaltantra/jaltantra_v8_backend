@@ -37,4 +37,9 @@ JalTantra-Code-and-Scripts/ampl.linux-intel64
 JalTantra-Code-and-Scripts/DataNetworkGraphInput_hashed
 JalTantra-Code-and-Scripts/NetworkResults
 JalTantra-Code-and-Scripts/octeract*
-logs
+
+#### Logs ####
+*.log
+logs/
+*.log
+*.gz
