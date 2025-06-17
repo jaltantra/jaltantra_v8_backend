@@ -1,28 +1,45 @@
 #!/bin/bash
 
-sudo apt-get install jq
+# === CONFIGURATION ===
+SERVER_USER="jaltantra_v8_backend"
+SERVER_IP="10.129.6.131"
+REMOTE_DIR="~/backend"
+JAR_NAME="jaltantra-backend-v8.jar"
+PROPERTIES_FILE="application-deploy.properties"
+DEPLOY_PORT=8431
 
-host_name=$(jq -r '.host_name' deploy_config.json)
-host_ip=$(jq -r '.remote_ip' deploy_config.json)
-host_folder=$(jq -r '.remote_folder' deploy_config.json)
+echo "🚀 Starting backend deployment to $SERVER_IP..."
 
-echo $host_name
-echo $host_ip
-echo $host_folder
+# === STEP 1: Stop any existing backend process ===
+echo "🛑 Stopping existing backend process on server..."
+ssh ${SERVER_USER}@${SERVER_IP} "
+    PID=\$(ps aux | grep ${JAR_NAME} | grep -v grep | awk '{print \$2}')
+    if [ ! -z \"\$PID\" ]; then
+        echo \"🔍 Found process ID \$PID. Killing it...\"
+        kill -9 \$PID
+    else
+        echo \"✅ No running backend process found.\"
+    fi
+"
 
+# === STEP 2: Build the JAR ===
+echo "🔨 Building JAR..."
+./mvnw clean package -DskipTests
 
-echo "Building Jaltantra"
-./mvnw package
-echo "Build finished"
+# === STEP 3: Copy files to the server ===
+echo "📦 Copying JAR and properties to server..."
+scp target/${JAR_NAME} ${SERVER_USER}@${SERVER_IP}:${REMOTE_DIR}/
+scp src/main/resources/${PROPERTIES_FILE} ${SERVER_USER}@${SERVER_IP}:${REMOTE_DIR}/
 
-echo "Transfering the jar file to deployment machine"
-mv target/JaltantraLoopSB-0.0.1-SNAPSHOT.jar target/JaltantraREST-0.0.2-SNAPSHOT.jar
-scp target/JaltantraREST-0.0.2-SNAPSHOT.jar $host_name@$host_ip:$host_folder
-echo "Transferd the jar file to deployment machine"
+# === STEP 4: Start the new backend process ===
+echo "🚀 Starting backend on remote server..."
+ssh ${SERVER_USER}@${SERVER_IP} "
+    cd ${REMOTE_DIR}
+    nohup java -jar -Dspring.config.location=file:${PROPERTIES_FILE} ${JAR_NAME} > backend.log 2>&1 &
+    sleep 2
+    echo \"⏳ Waiting for service to bind to port ${DEPLOY_PORT}...\"
+    lsof -i :${DEPLOY_PORT} || echo \"❌ Port ${DEPLOY_PORT} not active yet. Check backend.log.\"
+"
 
-
-COMMAND="nohup java -jar $host_folder/JaltantraREST-0.0.2-SNAPSHOT.jar --spring.profiles.active=deploy  > /dev/null 2>&1"
-
-ssh $host_name@$host_ip $COMMAND
-
-
+echo "✅ Deployment completed. You can tail the log using:"
+echo "   ssh ${SERVER_USER}@${SERVER_IP} 'tail -f ${REMOTE_DIR}/backend.log'"
